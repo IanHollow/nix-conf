@@ -5,7 +5,7 @@
   ...
 }:
 let
- # TODO: move to separate area
+  # TODO: move to separate area
   gitUserName = "Ian Holloway";
   gitUserEmail = "ian.m.holloway@gmail.com";
 in
