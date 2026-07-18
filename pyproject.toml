@@ -77,6 +77,14 @@ strict = true
   "S603", # Command args are constrained to fixed nix and validated binary invocations.
   "S310", # URL opening is limited to validated HTTPS GitHub release URLs.
 ]
+"pkgs/agent-skills-updater.py" = [
+  "N999", # The hyphenated filename is executed as a script, not imported as a Python module.
+  "S404", # Uses subprocess intentionally to call nix store prefetch-file.
+  "S603", # Command args are constrained to a fixed nix invocation and GitHub archive URL.
+  "S607", # nix is provided by the user environment for this local updater.
+  "S310", # URL opening is limited to fixed HTTPS GitHub API endpoints.
+  "T201", # This command-line updater reports its status and diffs on stdout.
+]
 "pkgs/spotify-spotx/update.py" = [
   "S404", # Uses subprocess intentionally to call nix and git for upstream discovery.
   "S603", # Command args are constrained to fixed nix/git invocations and validated refs.

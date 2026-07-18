@@ -56,7 +56,8 @@ class _UpstreamState:
     version: str
     url: str
     hash_sri: str
-    agent_skill_content: str
+    agent_skill_url: str
+    agent_skill_hash_sri: str
 
 
 def _stdout(message: str) -> None:
@@ -94,7 +95,7 @@ def _fetch_json(url: str, *, label: str, timeout: int = 30) -> object:
         _fail(f"failed to parse JSON for {label} from {url}: {exc}")
 
 
-def _fetch_text(url: str, *, label: str, timeout: int = 30) -> str:
+def _fetch_bytes(url: str, *, label: str, timeout: int = 30) -> bytes:
     parsed_url = urlparse(url)
     if parsed_url.scheme != "https":
         _fail(f"unsupported URL scheme for {label}: {parsed_url.scheme!r}")
@@ -102,11 +103,9 @@ def _fetch_text(url: str, *, label: str, timeout: int = 30) -> str:
     try:
         request = Request(url, headers={"User-Agent": HTTP_USER_AGENT})
         with urlopen(request, timeout=timeout, context=HTTPS_CONTEXT) as response:
-            return response.read().decode("utf-8")
+            return response.read()
     except URLError as exc:
         _fail(f"failed to fetch {label} from {url}: {exc}")
-    except UnicodeDecodeError as exc:
-        _fail(f"failed to decode {label} from {url}: {exc}")
 
 
 def _run_checked(
@@ -205,15 +204,15 @@ def _validate_agent_skill_url(version: str, url: str) -> None:
         )
 
 
-def _validate_agent_skill(content: str) -> str:
-    normalized = content.replace("\r\n", "\n")
-    if not normalized.endswith("\n"):
-        normalized += "\n"
-    if not normalized.startswith("---\n"):
+def _validate_agent_skill(content: bytes) -> None:
+    try:
+        decoded = content.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        _fail(f"failed to decode remindctl agent skill: {exc}")
+    if not decoded.startswith("---\n"):
         _fail("remindctl agent skill is missing YAML frontmatter")
-    if re.search(r"^name: apple-reminders$", normalized, flags=re.MULTILINE) is None:
+    if re.search(r"^name: apple-reminders$", decoded, flags=re.MULTILINE) is None:
         _fail("remindctl agent skill does not declare the expected name")
-    return normalized
 
 
 def _download_file(url: str, destination: Path, *, timeout: int = 60) -> None:
@@ -273,6 +272,10 @@ def _hash_file_sha256_sri(path: Path) -> str:
     return f"sha256-{base64.b64encode(digest.digest()).decode('ascii')}"
 
 
+def _hash_bytes_sha256_sri(content: bytes) -> str:
+    return f"sha256-{base64.b64encode(hashlib.sha256(content).digest()).decode('ascii')}"
+
+
 def _validate_archive(version: str, url: str) -> str:
     if sys.platform != "darwin" or platform.machine() != "arm64":
         _fail("remindctl release validation requires an arm64 Darwin host")
@@ -317,13 +320,14 @@ def _discover_upstream() -> _UpstreamState:
     _validate_download_url(version, url)
     agent_skill_url = _agent_skill_url(version)
     _validate_agent_skill_url(version, agent_skill_url)
+    skill_content = _fetch_bytes(agent_skill_url, label="remindctl agent skill")
+    _validate_agent_skill(skill_content)
     return _UpstreamState(
         version=version,
         url=url,
         hash_sri=_validate_archive(version, url),
-        agent_skill_content=_validate_agent_skill(
-            _fetch_text(agent_skill_url, label="remindctl agent skill"),
-        ),
+        agent_skill_url=agent_skill_url,
+        agent_skill_hash_sri=_hash_bytes_sha256_sri(skill_content),
     )
 
 
@@ -334,6 +338,10 @@ def _render_source(upstream: _UpstreamState) -> str:
         "  src = {\n"
         f'    url = "{upstream.url}";\n'
         f'    hash = "{upstream.hash_sri}";\n'
+        "  };\n"
+        "  skill = {\n"
+        f'    url = "{upstream.agent_skill_url}";\n'
+        f'    hash = "{upstream.agent_skill_hash_sri}";\n'
         "  };\n"
         "}\n"
     )
@@ -379,28 +387,17 @@ def _parse_args(argv: Sequence[str]) -> argparse.Namespace:
 def _main(argv: Sequence[str] | None = None) -> int:
     args = _parse_args(argv if argv is not None else sys.argv[1:])
     source_path = Path(__file__).with_name("source.nix")
-    agent_skill_path = Path(__file__).with_name("SKILL.md")
 
     old_source_content = source_path.read_text(encoding="utf-8")
-    old_agent_skill_content = agent_skill_path.read_text(encoding="utf-8")
     upstream = _discover_upstream()
     new_source_content = _render_source(upstream)
-    new_agent_skill_content = upstream.agent_skill_content
 
-    if (
-        new_source_content == old_source_content
-        and new_agent_skill_content == old_agent_skill_content
-    ):
+    if new_source_content == old_source_content:
         _stdout("[update] remindctl is already up to date")
         return 0
 
     source_diff = _build_diff(old_source_content, new_source_content, source_path)
-    agent_skill_diff = _build_diff(
-        old_agent_skill_content,
-        new_agent_skill_content,
-        agent_skill_path,
-    )
-    sys.stdout.write(source_diff + agent_skill_diff)
+    sys.stdout.write(source_diff)
 
     if args.check:
         return 1
@@ -409,7 +406,6 @@ def _main(argv: Sequence[str] | None = None) -> int:
         return 0
 
     _write_atomic(source_path, new_source_content)
-    _write_atomic(agent_skill_path, new_agent_skill_content)
     _stdout("[update] updated remindctl")
     return 0
 

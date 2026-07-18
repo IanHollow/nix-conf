@@ -14,6 +14,7 @@ stdenvNoCC.mkDerivation (finalAttrs: {
   inherit (source) version;
 
   src = fetchurl source.src;
+  agentSkillSource = fetchurl source.skill;
 
   nativeBuildInputs = [ unzip ];
   sourceRoot = ".";
@@ -26,6 +27,7 @@ stdenvNoCC.mkDerivation (finalAttrs: {
     runHook preInstall
 
     install -Dm755 remindctl "$out/bin/${pname}"
+    install -Dm644 "$agentSkillSource" "$out/share/agent-skills/apple-reminders/SKILL.md"
 
     runHook postInstall
   '';
@@ -35,12 +37,13 @@ stdenvNoCC.mkDerivation (finalAttrs: {
     runHook preInstallCheck
 
     test "$("$out/bin/${pname}" --version)" = "${finalAttrs.version}"
+    grep -q '^name: apple-reminders$' "$out/share/agent-skills/apple-reminders/SKILL.md"
 
     runHook postInstallCheck
   '';
 
   passthru = {
-    agentSkill = ./SKILL.md;
+    agentSkill = "${finalAttrs.finalPackage}/share/agent-skills/apple-reminders";
     updateScript = [ ./update.py ];
   };
 

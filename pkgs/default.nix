@@ -1,7 +1,9 @@
 { pkgs }:
 {
   claude-desktop = pkgs.callPackage ./claude-desktop { };
+  anthropic-skills = pkgs.callPackage ./anthropic-skills { };
   openai-codex-desktop = pkgs.callPackage ./openai-codex-desktop { };
+  openai-skills = pkgs.callPackage ./openai-skills { };
   microsoft-teams = pkgs.callPackage ./microsoft-teams { };
   remindctl = pkgs.callPackage ./remindctl { };
   spicetify-cli-fixed = pkgs.callPackage ./spicetify-cli-fixed { };
