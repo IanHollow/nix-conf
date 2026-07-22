@@ -11,6 +11,6 @@
     in
     {
       _module.args.pkgs = pkgs;
-      packages = import ../../pkgs { inherit pkgs; };
+      packages = inputs.nixpkgs-personal.packages.${system};
     };
 }

@@ -1,0 +1,4 @@
+[submodule "pkgs"]
+	path = pkgs
+	url = git@github.com:IanHollow/nixpkgs-personal.git
+	branch = main
