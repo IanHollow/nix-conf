@@ -21,4 +21,4 @@ jobs:
           submodules: recursive
       - uses: cachix/install-nix-action@630ae543ea3a38a9a4166f03376c02c50f408342 # v31.11.0
       - uses: DeterminateSystems/magic-nix-cache-action@55718cd9ebf1737a061487d5ada21abf31e99a98 # main
-      - run: nix flake check --all-systems --no-build
+      - run: nix flake check --all-systems
