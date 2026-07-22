@@ -33,7 +33,10 @@ let
       inherit overlays;
       config = nixpkgsArgs.config or { };
     }
-    // removeAttrs nixpkgsArgs [ "overlays" "config" ];
+    // removeAttrs nixpkgsArgs [
+      "overlays"
+      "config"
+    ];
 in
 {
   inherit mkNixpkgsImportArgs mkNixpkgsLocalSystem mkNixpkgsOverlays;
@@ -60,17 +63,14 @@ in
     in
     {
       nixpkgs = {
-        hostPlatform = mkNixpkgsLocalSystem {
-          inherit
-            system
-            darwinSdkVersion
-            darwinMinVersion
-            ;
-        };
+        hostPlatform = mkNixpkgsLocalSystem { inherit system darwinSdkVersion darwinMinVersion; };
         flake.source = nixpkgsSource;
         inherit overlays;
         config = nixpkgsArgs.config or { };
       }
-      // removeAttrs nixpkgsArgs [ "overlays" "config" ];
+      // removeAttrs nixpkgsArgs [
+        "overlays"
+        "config"
+      ];
     };
 }
