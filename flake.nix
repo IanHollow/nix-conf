@@ -136,7 +136,7 @@
   };
 
   outputs =
-    inputs@{ self, ... }:
+    inputs:
     let
       myLib = import ./lib { inherit (inputs.nixpkgs) lib; };
       allSecrets = import ./secrets { inherit myLib; };
@@ -148,7 +148,11 @@
           myLib.secrets.selectSecretsForTarget {
             secretsTree = allSecrets;
             target = {
-              targetId = if kind == "home" then "home:${target.username}@${target.folderName}" else "host:${kind}:${target.folderName}";
+              targetId =
+                if kind == "home" then
+                  "home:${target.username}@${target.folderName}"
+                else
+                  "host:${kind}:${target.folderName}";
               targetType = if kind == "home" then "home" else "host";
               username = if kind == "home" then target.username else null;
               configName = target.folderName;
@@ -177,8 +181,6 @@
         extraSpecialArgsFor = { kind, target }: { secrets = secretsFor { inherit kind target; }; };
       };
 
-      perSystem = { system, ... }: {
-        packages = inputs.nixpkgs-personal.packages.${system};
-      };
+      perSystem = { system, ... }: { packages = inputs.nixpkgs-personal.packages.${system}; };
     };
 }
