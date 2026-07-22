@@ -1,4 +1,4 @@
-{ modules, ... }:
+{ modules, inputs, ... }:
 let
   actualServerCaseFixOverlay = _final: prev: {
     actual-server = prev.actual-server.overrideAttrs (old: {
@@ -49,12 +49,16 @@ in
     chromium-policies
     agenix
 
-    ## Users
-    home-manager
-    users
-
     security
     stylix
     fonts
   ];
+
+  homes.ianmh = {
+    config = "ianmh@macbook-pro-m4";
+    user = {
+      description = "Ian Holloway";
+      shell = inputs.nixpkgs.legacyPackages.aarch64-darwin.nushell;
+    };
+  };
 }

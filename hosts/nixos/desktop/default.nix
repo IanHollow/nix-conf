@@ -25,8 +25,6 @@
     chromium-policies
     boot
     agenix
-
-    ./hardware/filesystems.nix
   ];
 
   # modules =

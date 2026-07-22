@@ -25,6 +25,15 @@
       url = "github:hercules-ci/flake-parts";
       inputs.nixpkgs-lib.follows = "nixpkgs";
     };
+    nix-config-framework = {
+      url = "path:./nix-config-framework";
+      inputs = {
+        nixpkgs.follows = "nixpkgs";
+        flake-parts.follows = "flake-parts";
+        home-manager.follows = "home-manager";
+        nix-darwin.follows = "nix-darwin";
+      };
+    };
     determinate = {
       url = "github:DeterminateSystems/determinate";
       inputs = {
@@ -120,16 +129,56 @@
         flake-compat.follows = "flake-compat";
       };
     };
+    treefmt-nix = {
+      url = "github:numtide/treefmt-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
-    inputs:
+    inputs@{ self, ... }:
+    let
+      myLib = import ./lib { inherit (inputs.nixpkgs) lib; };
+      allSecrets = import ./secrets { inherit myLib; };
+      secretsFor =
+        { kind, target }:
+        if !(target ? secrets) then
+          { }
+        else
+          myLib.secrets.selectSecretsForTarget {
+            secretsTree = allSecrets;
+            target = {
+              targetId = if kind == "home" then "home:${target.username}@${target.folderName}" else "host:${kind}:${target.folderName}";
+              targetType = if kind == "home" then "home" else "host";
+              username = if kind == "home" then target.username else null;
+              configName = target.folderName;
+              platform = if kind == "home" then null else kind;
+              groups = target.secrets.groups or [ ];
+            };
+          };
+    in
     inputs.flake-parts.lib.mkFlake { inherit inputs; } {
       systems = [
         "x86_64-linux"
         "aarch64-linux"
         "aarch64-darwin"
       ];
-      imports = [ ./flake ];
+      imports = [
+        inputs.nix-config-framework.flakeModules.default
+        ./flake/dev
+        ./flake/secrets.nix
+      ];
+
+      _module.args.myLib = myLib;
+
+      nixConfigFramework = {
+        root = ./.;
+        extraSpecialArgs = { inherit myLib; };
+        extraSpecialArgsFor = { kind, target }: { secrets = secretsFor { inherit kind target; }; };
+      };
+
+      perSystem = { system, ... }: {
+        packages = inputs.nixpkgs-personal.packages.${system};
+      };
     };
 }

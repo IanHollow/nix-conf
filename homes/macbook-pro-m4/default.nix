@@ -110,7 +110,5 @@ in
 
     steam-darwin
     prismlauncher
-
-    extra-config
   ];
 }
