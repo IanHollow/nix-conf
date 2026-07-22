@@ -134,10 +134,20 @@ clean *args:
 
 # Run updater scripts from the nixpkgs-personal submodule
 [group('Maintenance')]
-update-packages *args:
+prepare-pkgs-branch:
+    @root_branch="$(git -C {{ flake }} branch --show-current)"; \
+        test -n "$root_branch" || { echo "error: the superproject must be on a branch" >&2; exit 1; }; \
+        if git -C {{ flake }}/pkgs show-ref --verify --quiet "refs/heads/$root_branch"; then \
+            git -C {{ flake }}/pkgs switch "$root_branch"; \
+        else \
+            git -C {{ flake }}/pkgs switch -c "$root_branch"; \
+        fi
+
+[group('Maintenance')]
+update-packages *args: prepare-pkgs-branch
     nix develop {{ flake }}/pkgs -c python {{ flake }}/pkgs/scripts/update-packages.py --all {{ args }}
 
 # Run updater script for one local package (e.g. ttf-ms-win11-auto)
 [group('Maintenance')]
-update-package package *args:
+update-package package *args: prepare-pkgs-branch
     nix develop {{ flake }}/pkgs -c python {{ flake }}/pkgs/scripts/update-packages.py --package {{ package }} {{ args }}
