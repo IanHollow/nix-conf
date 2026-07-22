@@ -13,17 +13,12 @@ update input="":
     nix flake update {{ input }} --flake {{ flake }}
 
 [group('Flake')]
-os-update input="":
-    nix flake update {{ input }} --flake {{ flake }}/flake/nixos/
-
-[group('Flake')]
 dev-update input="":
     nix flake update {{ input }} --flake {{ flake }}/flake/dev/
 
 [group('Flake')]
 update-all:
     @just update
-    @just os-update
     @just dev-update
     @just update-packages
 
