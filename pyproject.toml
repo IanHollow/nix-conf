@@ -8,20 +8,20 @@ future-annotations = true
 select = ["ALL"]
 ignore = [
   # Ruff Formatter Ignores
-  "W191",   # tab-indentation
-  "E111",   # indentation-with-invalid-multiple
-  "E114",   # indentation-with-invalid-multiple-comment
-  "E117",   # over-indented
-  "D206",   # docstring-tab-indentation
-  "D300",   # triple-single-quotes
-  "Q000",   # bad-quotes-inline-string
-  "Q001",   # bad-quotes-multiline-string
-  "Q002",   # bad-quotes-docstring
-  "Q003",   # avoidable-escaped-quote
-  "COM812", # missing-trailing-comma
-  "COM819", # prohibited-trailing-comma
-  "ISC002", # multi-line-implicit-string-concatenation, ignore if used without ISC001 and flake8-implicit-str-concat.allow-multiline = false
-  "E501",   # line-too-long
+  "tab-indentation",   # tab-indentation
+  "indentation-with-invalid-multiple",   # indentation-with-invalid-multiple
+  "indentation-with-invalid-multiple-comment",   # indentation-with-invalid-multiple-comment
+  "over-indented",   # over-indented
+  "docstring-tab-indentation",   # docstring-tab-indentation
+  "triple-single-quotes",   # triple-single-quotes
+  "bad-quotes-inline-string",   # bad-quotes-inline-string
+  "bad-quotes-multiline-string",   # bad-quotes-multiline-string
+  "bad-quotes-docstring",   # bad-quotes-docstring
+  "avoidable-escaped-quote",   # avoidable-escaped-quote
+  "missing-trailing-comma", # missing-trailing-comma
+  "prohibited-trailing-comma", # prohibited-trailing-comma
+  "multi-line-implicit-string-concatenation", # multi-line-implicit-string-concatenation, ignore if used without ISC001 and flake8-implicit-str-concat.allow-multiline = false
+  "line-too-long",   # line-too-long
 
   # Copyright
   "CPY",
@@ -30,11 +30,11 @@ ignore = [
   "FBT",
 
   # No need for init files
-  "INP001",
+  "implicit-namespace-package",
 
   # Documentation
-  "D203", # 1 blank line before class docstring
-  "D213", # multi-line-summary-first-line
+  "incorrect-blank-line-before-class", # 1 blank line before class docstring
+  "multi-line-summary-second-line", # multi-line-summary-first-line
 ]
 
 [tool.ruff.lint.flake8-bandit]
