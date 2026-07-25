@@ -1,0 +1,171 @@
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
+let
+  inherit (pkgs.stdenv.hostPlatform) isDarwin;
+
+  cfg = config.services.propVm;
+  sshDir = "${config.home.homeDirectory}/.ssh";
+  keyFile = "${sshDir}/prop-vm";
+  stateDir = "${config.xdg.stateHome}/prop-vm";
+
+  # This is the MAC address of ethernet1, the VM's host-only adapter. VMware
+  # gives this adapter a lease from the 172.16.42.0/24 network on this Mac.
+  propVmHost = pkgs.writeShellApplication {
+    name = "prop-vm-host";
+    runtimeInputs = [ pkgs.gawk ];
+    text = ''
+      set -eu
+
+      lease_file=/var/db/vmware/vmnet-dhcpd-vmnet1.leases
+      vm_mac=00:0c:29:35:9f:d5
+
+      if [ ! -r "$lease_file" ]; then
+        printf 'Cannot read VMware host-only DHCP leases: %s\n' "$lease_file" >&2
+        exit 1
+      fi
+
+      vm_host="$(${pkgs.gawk}/bin/awk -v mac="$vm_mac" '
+        /^lease / { lease = $2 }
+        $1 == "hardware" {
+          address = tolower($3)
+          sub(/;$/, "", address)
+          if (address == mac) host = lease
+        }
+        END { print host }
+      ' "$lease_file")"
+
+      case "$vm_host" in
+        172.16.42.*) printf '%s\n' "$vm_host" ;;
+        *)
+          printf 'No valid host-only lease found for the Prop VM (%s).\n' "$vm_mac" >&2
+          exit 1
+          ;;
+      esac
+    '';
+  };
+
+  propVmProxy = pkgs.writeShellApplication {
+    name = "prop-vm-proxy";
+    runtimeInputs = [
+      propVmHost
+      pkgs.netcat
+    ];
+    text = ''
+      set -eu
+      # `nc -w` also times out idle reads, which tears down an otherwise
+      # healthy long-lived SSH tunnel. OpenSSH handles connection retries.
+      exec nc "$(prop-vm-host)" "$1"
+    '';
+  };
+
+  propVmStatus = pkgs.writeShellApplication {
+    name = "prop-vm-status";
+    runtimeInputs = [
+      propVmHost
+      pkgs.netcat
+      pkgs.lsof
+    ];
+    text = ''
+      set -eu
+      vm_host="$(prop-vm-host)"
+
+      printf 'Host-only VM address: %s\n' "$vm_host"
+      nc -vz -w 3 "$vm_host" 22
+
+      for port in 8787 8766; do
+        if nc -vz -w 3 "$vm_host" "$port"; then
+          printf 'Unsafe: VM port %s is reachable over host-only networking.\n' "$port" >&2
+          exit 1
+        fi
+      done
+
+      printf '\nMac control-host listeners:\n'
+      lsof -nP -iTCP:5173 -iTCP:8788 -iTCP:8443 -sTCP:LISTEN || true
+    '';
+  };
+
+  propVmSshSettings = {
+    HostName = "prop-vm";
+    HostKeyAlias = "prop-vm";
+    User = cfg.windowsUser;
+    IdentityFile = keyFile;
+    IdentitiesOnly = true;
+    AddKeysToAgent = "no";
+    BatchMode = true;
+    PasswordAuthentication = false;
+    KbdInteractiveAuthentication = false;
+    PubkeyAuthentication = true;
+
+    # Resolve the current VMware host-only DHCP lease at connection time.
+    # The VM's NAT interface is deliberately never used for inbound access.
+    ProxyCommand = "${propVmProxy}/bin/prop-vm-proxy %p";
+
+    # Do not let the unattended launchd agent accept a host key. Add the
+    # verified key once, following docs/prop-vm.md, before the tunnel starts.
+    StrictHostKeyChecking = "yes";
+    UpdateHostKeys = "no";
+    ControlMaster = "no";
+    ServerAliveInterval = 30;
+    ServerAliveCountMax = 3;
+  };
+in
+{
+  options.services.propVm = {
+    enable = lib.mkEnableOption "host-only SSH access to the Prop VM";
+
+    windowsUser = lib.mkOption {
+      type = lib.types.str;
+      default = config.home.username;
+      description = "Windows account permitted to log in to the Prop VM through SSH.";
+    };
+
+  };
+
+  config = lib.mkIf cfg.enable {
+    assertions = [
+      {
+        assertion = isDarwin;
+        message = "services.propVm is implemented for the VMware Fusion host on macOS.";
+      }
+    ];
+
+    home.packages = [
+      propVmHost
+      propVmStatus
+    ];
+
+    home.activation.propVmKey = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+      set -eu
+      umask 0077
+      mkdir -p ${lib.escapeShellArg sshDir} ${lib.escapeShellArg stateDir}
+      chmod 700 ${lib.escapeShellArg sshDir} ${lib.escapeShellArg stateDir}
+
+      if [ ! -f ${lib.escapeShellArg keyFile} ]; then
+        ${pkgs.openssh}/bin/ssh-keygen \
+          -t ed25519 \
+          -a 100 \
+          -N "" \
+          -C 'prop-vm tunnel key' \
+          -f ${lib.escapeShellArg keyFile}
+      fi
+
+      if [ ! -f ${lib.escapeShellArg "${keyFile}.pub"} ]; then
+        ${pkgs.openssh}/bin/ssh-keygen -y -f ${lib.escapeShellArg keyFile} > ${lib.escapeShellArg "${keyFile}.pub"}
+      fi
+
+      chmod 600 ${lib.escapeShellArg keyFile}
+      chmod 644 ${lib.escapeShellArg "${keyFile}.pub"}
+    '';
+
+    programs.ssh.settings = {
+      # Use this plain SSH host in Codex and terminals. It deliberately does
+      # not create a local port forward.
+      prop-vm = propVmSshSettings;
+
+    };
+  };
+}

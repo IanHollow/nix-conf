@@ -70,6 +70,7 @@ in
       };
     })
     server-ssh
+    (_: { services.propControl.enable = true; })
 
     firefox
     firefox-scrolling-natural
