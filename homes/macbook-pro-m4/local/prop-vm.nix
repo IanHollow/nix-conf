@@ -50,15 +50,14 @@ let
 
   propVmProxy = pkgs.writeShellApplication {
     name = "prop-vm-proxy";
-    runtimeInputs = [
-      propVmHost
-      pkgs.netcat
-    ];
+    runtimeInputs = [ propVmHost ];
     text = ''
       set -eu
-      # `nc -w` also times out idle reads, which tears down an otherwise
-      # healthy long-lived SSH tunnel. OpenSSH handles connection retries.
-      exec nc "$(prop-vm-host)" "$1"
+      # The Darwin system netcat works reliably with VMware Fusion's host-only
+      # adapter.  The LibreSSL netcat packaged by Nix reports a spurious
+      # host-unreachable error for this path after a VM adapter reset.
+      # Do not pass `-w`: it also times out idle reads in a healthy SSH tunnel.
+      exec /usr/bin/nc "$(prop-vm-host)" "$1"
     '';
   };
 
