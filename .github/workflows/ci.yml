@@ -107,11 +107,13 @@ jobs:
           nix build --keep-going --show-trace --print-build-logs --no-link \
             ".#checks.${TARGET_SYSTEM}.treefmt"
       - name: Build native Nix outputs
+        id: native-build
         shell: bash
         env:
           TARGET_SYSTEM: ${{ matrix.system }}
         run: |
           set -euo pipefail
+          build_log="${RUNNER_TEMP}/nix-build-${TARGET_SYSTEM}.log"
 
           build_attrs=()
           while IFS= read -r build_attr; do
@@ -136,4 +138,21 @@ jobs:
               ;;
           esac
 
-          nix build --keep-going --show-trace --print-build-logs --no-link "${build_attrs[@]}"
+          set +e
+          nix build --keep-going --show-trace --print-build-logs --no-link "${build_attrs[@]}" >"${build_log}" 2>&1
+          build_status=$?
+          set -e
+
+          if [ "${build_status}" -ne 0 ]; then
+            tail -n 200 "${build_log}"
+            exit "${build_status}"
+          fi
+
+          tail -n 40 "${build_log}"
+      - name: Upload native Nix build log
+        if: always() && steps.native-build.outcome == 'failure'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: nix-build-log-${{ matrix.system }}
+          path: ${{ runner.temp }}/nix-build-${{ matrix.system }}.log
+          if-no-files-found: error
