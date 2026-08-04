@@ -113,7 +113,10 @@ jobs:
         run: |
           set -euo pipefail
 
-          mapfile -t build_attrs < <(
+          build_attrs=()
+          while IFS= read -r build_attr; do
+            build_attrs+=("${build_attr}")
+          done < <(
             nix eval --json ".#packages.${TARGET_SYSTEM}" --apply builtins.attrNames |
               jq -r --arg system "${TARGET_SYSTEM}" '.[] | ".#packages.\($system).\(.)"'
           )
