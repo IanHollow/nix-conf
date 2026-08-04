@@ -22,7 +22,7 @@ jobs:
         with:
           persist-credentials: false
       - run: |
-          if git grep -nEi 'secret[c]tl|secret[I]ndex|config[.]age[.]secrets|inputs[.]agenix'; then
+          if git grep -nEi 'secret[c]tl|secret[I]ndex|config[.]age[.]secrets|inputs[.]agenix' -- . ':(exclude).gitleaks.toml'; then
             echo 'removed secret-manager symbols or agenix runtime references found' >&2
             exit 1
           fi
