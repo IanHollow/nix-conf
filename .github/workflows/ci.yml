@@ -61,6 +61,12 @@ jobs:
           persist-credentials: false
           submodules: recursive
       - uses: DeterminateSystems/determinate-nix-action@61cbfe2efc2d4e7a8a6d56967c3c1058e846c858 # v3.21.9
+      - name: Reclaim unused Nix store space
+        if: runner.os == 'macOS'
+        run: |
+          set -euo pipefail
+          nix store gc
+          df -h /
       - name: Materialize partition sources
         run: |
           nix store add-path flake/dev
