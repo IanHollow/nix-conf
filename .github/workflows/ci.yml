@@ -100,4 +100,32 @@ jobs:
           nix store add-path pkgs/flake/dev
       - name: Run flake checks
         run: >-
-          nix flake check --keep-going --show-trace --print-build-logs --system ${{ matrix.system }}
+          nix flake check --keep-going --show-trace --print-build-logs --no-build --system ${{ matrix.system }}
+      - name: Build native Nix outputs
+        shell: bash
+        env:
+          TARGET_SYSTEM: ${{ matrix.system }}
+        run: |
+          set -euo pipefail
+
+          mapfile -t build_attrs < <(
+            nix eval --json ".#packages.${TARGET_SYSTEM}" --apply builtins.attrNames |
+              jq -r --arg system "${TARGET_SYSTEM}" '.[] | ".#packages.\($system).\(.)"'
+          )
+
+          case "${TARGET_SYSTEM}" in
+            x86_64-linux)
+              build_attrs+=(
+                '.#nixosConfigurations.desktop.config.system.build.toplevel'
+                '.#homeConfigurations.ianmh@desktop.activationPackage'
+              )
+              ;;
+            aarch64-darwin)
+              build_attrs+=(
+                '.#darwinConfigurations.macbook-pro-m4.system'
+                '.#homeConfigurations.ianmh@macbook-pro-m4.activationPackage'
+              )
+              ;;
+          esac
+
+          nix build --keep-going --show-trace --print-build-logs --no-link "${build_attrs[@]}"
