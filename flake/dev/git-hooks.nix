@@ -84,6 +84,9 @@
             excludes = [
               "^secrets/.*\\.age$"
               "^\\.gitmodules$"
+              "^nix-config-framework/"
+              "^nix-seal/"
+              "^pkgs/"
             ];
           };
           typos = {
