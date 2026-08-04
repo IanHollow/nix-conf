@@ -61,6 +61,11 @@ jobs:
           persist-credentials: false
           submodules: recursive
       - uses: DeterminateSystems/determinate-nix-action@61cbfe2efc2d4e7a8a6d56967c3c1058e846c858 # v3.21.9
+      - name: Materialize partition sources
+        run: |
+          nix store add-path flake/dev
+          nix store add-path nix-seal/flake/dev
+          nix store add-path pkgs/flake/dev
       - name: Run prek hooks
         run: nix develop --command prek run --all-files
       - name: Scan repository for leaked secrets
