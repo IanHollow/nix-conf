@@ -99,8 +99,13 @@ jobs:
           nix store add-path nix-seal/flake/dev
           nix store add-path pkgs/flake/dev
       - name: Run flake checks
-        run: >-
-          nix flake check --keep-going --show-trace --print-build-logs --no-build --system ${{ matrix.system }}
+        shell: bash
+        env:
+          TARGET_SYSTEM: ${{ matrix.system }}
+        run: |
+          set -euo pipefail
+          nix build --keep-going --show-trace --print-build-logs --no-link \
+            ".#checks.${TARGET_SYSTEM}.treefmt"
       - name: Build native Nix outputs
         shell: bash
         env:
