@@ -1,0 +1,16 @@
+name: Dependency Review
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+  workflow_dispatch:
+permissions: {}
+jobs:
+  dependency-review:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/dependency-review-action@5595ccaf912efad79be6eef63a5619ff05969be3 # v4.0.0
+        with:
+          fail-on-severity: high
