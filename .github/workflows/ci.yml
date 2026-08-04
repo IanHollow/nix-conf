@@ -61,10 +61,6 @@ jobs:
           persist-credentials: false
           submodules: recursive
       - uses: DeterminateSystems/determinate-nix-action@61cbfe2efc2d4e7a8a6d56967c3c1058e846c858 # v3.21.9
-      - uses: DeterminateSystems/magic-nix-cache-action@908b263ff629f4cc17666315b7fd3ec127c6244d # v14
-        with:
-          use-flakehub: disabled
-          use-gha-cache: enabled
       - name: Run prek hooks
         run: nix develop --command prek run --all-files
       - name: Scan repository for leaked secrets
@@ -92,10 +88,6 @@ jobs:
           persist-credentials: false
           submodules: recursive
       - uses: DeterminateSystems/determinate-nix-action@61cbfe2efc2d4e7a8a6d56967c3c1058e846c858 # v3.21.9
-      - uses: DeterminateSystems/magic-nix-cache-action@908b263ff629f4cc17666315b7fd3ec127c6244d # v14
-        with:
-          use-flakehub: disabled
-          use-gha-cache: enabled
       - name: Run flake checks
         run: >-
           nix flake check --keep-going --show-trace --print-build-logs --system ${{ matrix.system }}
