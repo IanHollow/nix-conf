@@ -144,10 +144,24 @@ jobs:
               ;;
           esac
 
-          set +e
-          nix build --keep-going --show-trace --print-build-logs --no-link "${build_attrs[@]}" >"${build_log}" 2>&1
-          build_status=$?
-          set -e
+          if [ "${TARGET_SYSTEM}" = "aarch64-darwin" ]; then
+            # The hosted macOS runner has less free disk than the Linux runners.
+            # Build each goal independently and collect unreferenced intermediates
+            # between goals so the native matrix still covers every output.
+            build_status=0
+            for build_attr in "${build_attrs[@]}"; do
+              if ! nix build --keep-going --show-trace --print-build-logs --no-link \
+                "${build_attr}" >>"${build_log}" 2>&1; then
+                build_status=1
+              fi
+              nix store gc >>"${build_log}" 2>&1 || true
+            done
+          else
+            set +e
+            nix build --keep-going --show-trace --print-build-logs --no-link "${build_attrs[@]}" >"${build_log}" 2>&1
+            build_status=$?
+            set -e
+          fi
 
           if [ "${build_status}" -ne 0 ]; then
             tail -n 200 "${build_log}"
