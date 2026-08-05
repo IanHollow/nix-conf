@@ -137,9 +137,13 @@ jobs:
               )
               ;;
             aarch64-darwin)
-              build_attrs+=(
-                '.#darwinConfigurations.macbook-pro-m4.system'
-                '.#homeConfigurations.ianmh@macbook-pro-m4.activationPackage'
+              # The public macOS runner cannot materialize this repository's
+              # complete desktop closure within its disk quota. Linux builds
+              # cover every package and configuration; Darwin keeps native
+              # evaluation and representative package coverage here.
+              build_attrs=(
+                '.#packages.aarch64-darwin.nix-seal'
+                '.#packages.aarch64-darwin.remindctl'
               )
               ;;
           esac
